@@ -63,6 +63,7 @@
             <h3>Resume</h3>
             <div class="dl-group">
               <a class="dl" id="resume-pdf-dl" href="#" download hidden>Download PDF</a>
+              <a class="dl" id="resume-pdf-open" href="#" target="_blank" rel="noopener" hidden>Open PDF</a>
               <a class="dl" id="resume-dl" href="#" download>Download .tex</a>
             </div>
           </div>
@@ -75,7 +76,9 @@
           <p class="pdf-note" id="pdf-note" hidden></p>
 
           <div id="resume-pdf-view" class="resume-view" hidden>
-            <iframe id="pdf-frame" title="Resume PDF preview" class="pdf-frame"></iframe>
+            <div id="pdf-canvas-wrap" class="pdf-canvas-wrap">
+              <p class="pdf-loading" id="pdf-loading">Loading preview…</p>
+            </div>
           </div>
 
           <div id="resume-tex-view" class="resume-view" hidden>
@@ -101,7 +104,10 @@
     </section>
   </main>
 
-  <script>
+  <script type="module">
+    import * as pdfjsLib from "/static/vendor/pdf.min.mjs";
+    pdfjsLib.GlobalWorkerOptions.workerSrc = "/static/vendor/pdf.worker.min.mjs";
+
     const form = document.getElementById("tailor-form");
     const statusEl = document.getElementById("status");
     const submitBtn = document.getElementById("submit-btn");
@@ -111,13 +117,15 @@
     const pdfView = document.getElementById("resume-pdf-view");
     const texView = document.getElementById("resume-tex-view");
     const resumeToggle = document.getElementById("resume-toggle");
-    const pdfFrame = document.getElementById("pdf-frame");
+    const canvasWrap = document.getElementById("pdf-canvas-wrap");
+    const pdfLoading = document.getElementById("pdf-loading");
     const resumeOut = document.getElementById("resume-out");
     const recompileBtn = document.getElementById("recompile-btn");
     const recompileStatus = document.getElementById("recompile-status");
 
     let currentTexName = null;
     let currentPdfName = null;
+    let renderToken = 0;
 
     function showResumeMode(mode) {
       const wantPdf = mode === "pdf";
@@ -129,19 +137,66 @@
       texView.hidden = wantPdf;
     }
 
+    function clearPdfCanvases() {
+      canvasWrap.querySelectorAll("canvas").forEach((c) => c.remove());
+    }
+
+    async function renderPdfPreview(pdfName) {
+      const token = ++renderToken;
+      clearPdfCanvases();
+      pdfLoading.hidden = false;
+      pdfLoading.textContent = "Loading preview…";
+      pdfLoading.className = "pdf-loading";
+
+      const url = `/view/pdf/${pdfName}?t=${Date.now()}`;
+      try {
+        const loadingTask = pdfjsLib.getDocument({ url, withCredentials: false });
+        const pdf = await loadingTask.promise;
+        if (token !== renderToken) return;
+
+        const maxWidth = Math.min(canvasWrap.clientWidth || 680, 820);
+        for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
+          const page = await pdf.getPage(pageNum);
+          if (token !== renderToken) return;
+          const unscaled = page.getViewport({ scale: 1 });
+          const scale = maxWidth / unscaled.width;
+          const viewport = page.getViewport({ scale: Math.min(scale, 2) });
+          const canvas = document.createElement("canvas");
+          canvas.className = "pdf-page";
+          canvas.width = Math.floor(viewport.width);
+          canvas.height = Math.floor(viewport.height);
+          canvasWrap.appendChild(canvas);
+          await page.render({ canvasContext: canvas.getContext("2d"), viewport }).promise;
+        }
+        pdfLoading.hidden = true;
+      } catch (err) {
+        if (token !== renderToken) return;
+        console.error(err);
+        pdfLoading.hidden = false;
+        pdfLoading.className = "pdf-loading err";
+        pdfLoading.textContent =
+          "Could not render the embedded preview. Use Open PDF or Download PDF — the file is still saved under data/output/.";
+      }
+    }
+
     function setPdfPreview(pdfName) {
       currentPdfName = pdfName;
       const pdfA = document.getElementById("resume-pdf-dl");
+      const openA = document.getElementById("resume-pdf-open");
       if (pdfName) {
         pdfA.hidden = false;
+        openA.hidden = false;
         pdfA.href = `/download/pdf/${pdfName}`;
         pdfA.download = pdfName;
-        // Cache-bust so recompile refreshes the iframe.
-        pdfFrame.src = `/view/pdf/${pdfName}?t=${Date.now()}`;
+        openA.href = `/view/pdf/${pdfName}`;
         pdfView.hidden = false;
+        renderPdfPreview(pdfName);
       } else {
         pdfA.hidden = true;
-        pdfFrame.removeAttribute("src");
+        openA.hidden = true;
+        clearPdfCanvases();
+        pdfLoading.hidden = false;
+        pdfLoading.textContent = "No PDF to preview.";
       }
     }
 
@@ -211,8 +266,8 @@
 
           const pdfNote = document.getElementById("pdf-note");
           resumeToggle.hidden = false;
-
           recompileBtn.hidden = false;
+
           if (data.paths.resume_pdf) {
             const pdfName = data.paths.resume_pdf.split("/").pop();
             setPdfPreview(pdfName);
@@ -224,10 +279,12 @@
             pdfView.hidden = true;
             if (data.pdf_error) {
               pdfNote.hidden = false;
-              pdfNote.textContent = "PDF compile failed: " + data.pdf_error + " You can edit the LaTeX and try Save & recompile.";
+              pdfNote.textContent =
+                "PDF compile failed: " + data.pdf_error + " You can edit the LaTeX and try Save & recompile.";
             } else {
               pdfNote.hidden = false;
-              pdfNote.textContent = "No PDF yet — showing LaTeX source. Use Save & recompile if the TeX service is up.";
+              pdfNote.textContent =
+                "No PDF yet — showing LaTeX source. Use Save & recompile if the TeX service is up.";
             }
             showResumeMode("tex");
           }
