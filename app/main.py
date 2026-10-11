@@ -9,6 +9,7 @@ from fastapi.templating import Jinja2Templates
 
 from app.config import settings
 from app.llm import LLMError
+from app.pdf import PDFError, compile_resume_pdf
 from app.tailor import generate_cover_letter, generate_resume, load_sources, save_outputs
 
 APP_DIR = Path(__file__).resolve().parent
@@ -48,6 +49,7 @@ async def health() -> dict:
         "bank_exists": settings.experience_bank_path.exists(),
         "background_exists": settings.background_path.exists(),
         "template_exists": settings.resume_template_path.exists(),
+        "tex_compile_url": settings.tex_compile_url or None,
     }
 
 
@@ -86,19 +88,28 @@ async def api_generate(
 
     paths = save_outputs(settings, resume_tex=resume_tex, cover_md=cover_md)
 
+    pdf_error: str | None = None
+    if paths.get("resume") and settings.tex_compile_url:
+        try:
+            paths["resume_pdf"] = await compile_resume_pdf(settings, paths["resume"])
+        except PDFError as exc:
+            # Still return .tex success; surface PDF failure in the payload.
+            pdf_error = str(exc)
+
     return JSONResponse(
         {
             "ok": True,
             "paths": paths,
             "resume": resume_tex,
             "cover_letter": cover_md,
+            "pdf_error": pdf_error,
         }
     )
 
 
 @app.get("/download/{kind}/{filename}")
 async def download(kind: str, filename: str) -> FileResponse:
-    if kind not in {"resume", "cover"}:
+    if kind not in {"resume", "cover", "pdf"}:
         raise HTTPException(status_code=404, detail="Unknown kind")
     safe = Path(filename).name
     if safe != filename or ".." in filename:
@@ -110,6 +121,8 @@ async def download(kind: str, filename: str) -> FileResponse:
         media = "application/x-tex"
     elif safe.endswith(".md"):
         media = "text/markdown"
+    elif safe.endswith(".pdf"):
+        media = "application/pdf"
     else:
         media = "application/octet-stream"
     return FileResponse(path, media_type=media, filename=safe)

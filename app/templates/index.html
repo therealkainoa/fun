@@ -60,9 +60,13 @@
       <div class="result-panels">
         <article class="panel" id="resume-panel" hidden>
           <div class="panel-head">
-            <h3>Resume (.tex)</h3>
-            <a class="dl" id="resume-dl" href="#" download>Download</a>
+            <h3>Resume</h3>
+            <div class="dl-group">
+              <a class="dl" id="resume-pdf-dl" href="#" download hidden>Download PDF</a>
+              <a class="dl" id="resume-dl" href="#" download>Download .tex</a>
+            </div>
           </div>
+          <p class="pdf-note" id="pdf-note" hidden></p>
           <pre id="resume-out"></pre>
         </article>
         <article class="panel" id="cover-panel" hidden>
@@ -112,6 +116,25 @@
           const a = document.getElementById("resume-dl");
           a.href = `/download/resume/${name}`;
           a.download = name;
+
+          const pdfA = document.getElementById("resume-pdf-dl");
+          const pdfNote = document.getElementById("pdf-note");
+          if (data.paths.resume_pdf) {
+            const pdfName = data.paths.resume_pdf.split("/").pop();
+            pdfA.hidden = false;
+            pdfA.href = `/download/pdf/${pdfName}`;
+            pdfA.download = pdfName;
+            pdfNote.hidden = true;
+            pdfNote.textContent = "";
+          } else {
+            pdfA.hidden = true;
+            if (data.pdf_error) {
+              pdfNote.hidden = false;
+              pdfNote.textContent = "PDF compile failed: " + data.pdf_error;
+            } else {
+              pdfNote.hidden = true;
+            }
+          }
         } else {
           resumePanel.hidden = true;
         }
@@ -127,7 +150,8 @@
           coverPanel.hidden = true;
         }
 
-        statusEl.textContent = "Done. Files also saved under data/output/.";
+        const pdfBit = data.paths && data.paths.resume_pdf ? " PDF ready." : "";
+        statusEl.textContent = "Done. Files also saved under data/output/." + pdfBit;
         statusEl.className = "status ok";
         results.scrollIntoView({ behavior: "smooth", block: "start" });
       } catch (err) {

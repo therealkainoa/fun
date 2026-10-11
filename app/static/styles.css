@@ -278,6 +278,12 @@ button[type="submit"]:disabled {
   color: var(--ink-soft);
 }
 
+.dl-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem 1.1rem;
+}
+
 .dl {
   color: var(--accent-deep);
   font-weight: 600;
@@ -288,6 +294,12 @@ button[type="submit"]:disabled {
 
 .dl:hover {
   border-bottom-color: var(--accent);
+}
+
+.pdf-note {
+  margin: 0 0 0.65rem;
+  font-size: 0.9rem;
+  color: var(--err);
 }
 
 pre {

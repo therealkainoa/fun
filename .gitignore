@@ -13,5 +13,10 @@ venv/
 data/output/*
 !data/output/.gitkeep
 *.log
+*.aux
+*.out
+*.fls
+*.fdb_latexmk
+*.synctex.gz
 .idea/
 .vscode/

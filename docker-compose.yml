@@ -7,9 +7,41 @@ services:
       - .env
     # UID 1000 matches the image appuser and typical host ownership of ./data.
     user: "1000:1000"
+    extra_hosts:
+      # Lets the app reach published sidecar ports via the host gateway when
+      # direct container-to-container bridge traffic is filtered.
+      - "host.docker.internal:host-gateway"
     volumes:
       # Bank, background, template, and generated outputs live on the host.
       - ./data:/app/data
     environment:
       DATA_DIR: /app/data
+      # Prefer Compose DNS (http://tex:8080/compile) on normal Docker installs.
+      # This project defaults to host-gateway + published 8080 for reliability.
+      TEX_COMPILE_URL: http://host.docker.internal:8080/compile
+    depends_on:
+      tex:
+        condition: service_started
     restart: unless-stopped
+
+  # Separate TeX Live image — keeps the Python app slim and shows how Compose
+  # wires two services that share a bind-mounted volume.
+  tex:
+    build:
+      context: .
+      dockerfile: Dockerfile.tex
+    user: "1000:1000"
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./data:/data
+    environment:
+      DATA_DIR: /data
+      PORT: "8080"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/health')"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s

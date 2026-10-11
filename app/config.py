@@ -18,6 +18,9 @@ class Settings(BaseSettings):
     # When true, skip the LLM and fill from the bank deterministically (offline demo).
     mock_llm: bool = False
 
+    # Compose `tex` sidecar (set in docker-compose.yml). Empty skips PDF.
+    tex_compile_url: str = ""
+
     @property
     def experience_bank_path(self) -> Path:
         return self.data_dir / "experience_bank.yaml"

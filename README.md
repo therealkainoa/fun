@@ -8,27 +8,52 @@ Paste a job description, choose **resume** and/or **cover letter**, and generate
 
 The model may **select and rephrase** facts from those sources. It must **never invent** employers, titles, dates, or metrics.
 
-**v1 artifact is `.tex`** (plus cover-letter Markdown). PDF compilation is optional/out of scope for v1 — compile locally with your usual TeX setup, or add a TeX Live step later.
+Outputs: tailored **`.tex`**, compiled **PDF** (via Compose `tex` service), and cover-letter **Markdown**.
 
 ---
 
 ## Quick start (Docker Compose)
 
 ```bash
-# 1. API key
+# 1. API key (or MOCK_LLM=1 for offline)
 cp .env.example .env
-# Edit .env — set either OPENAI_API_KEY or ANTHROPIC_API_KEY
+# Edit .env — set OPENAI_API_KEY or ANTHROPIC_API_KEY, or MOCK_LLM=1
 
-# 2. Run
+# 2. Build & run both services (app + tex)
 docker compose up --build
 
 # 3. Open
 # http://localhost:8000
 ```
 
-Paste a JD, keep both checkboxes on, click **Generate**. Outputs appear in the UI and under `data/output/` (`resume-*.tex`, `cover-letter-*.md`).
+Paste a JD, generate, then download **PDF** and/or **.tex**. Files land under `data/output/` (`resume-*.tex`, `resume-*.pdf`, `cover-letter-*.md`).
+
+**Pull / rebuild after updates:**
+
+```bash
+git pull
+docker compose up --build
+```
 
 Stop with `Ctrl+C`, or `docker compose down`.
+
+---
+
+## PDF compile (Compose `tex` service)
+
+| Piece | Role |
+|-------|------|
+| `app` | FastAPI UI; writes `.tex` into the shared `./data` mount; asks `tex` to compile |
+| `tex` | TeX Live + `latexmk` sidecar (`Dockerfile.tex`); HTTP compile API on port **8080** |
+| `./data` bind mount | Shared by both services — `app` sees `/app/data`, `tex` sees `/data` |
+
+Flow: generate resume → save `data/output/resume-….tex` → `app` POSTs to `TEX_COMPILE_URL` → `latexmk -pdf` → `data/output/resume-….pdf`.
+
+`TEX_COMPILE_URL` defaults to `http://host.docker.internal:8080/compile` (Compose `extra_hosts` + published `8080`). On a typical Docker install you can switch it to `http://tex:8080/compile` (Compose DNS). Either way you learn: **two services, one shared volume, one compile API**.
+
+### Image size tradeoff
+
+`Dockerfile.tex` installs a **focused** Debian TeX set (`texlive-latex-base/recommended/extra` + recommended fonts + `latexmk`), not `texlive-full` and not `texlive-fonts-extra`. Measured here: **`tex` ≈ 991MB**, **`app` ≈ 254MB**. A full TeX Live image is multi‑GB.
 
 ---
 
@@ -38,11 +63,13 @@ Stop with `Ctrl+C`, or `docker compose down`.
 python -m venv .venv
 source .venv/bin/activate   # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
-cp .env.example .env        # add OPENAI_API_KEY or ANTHROPIC_API_KEY
+cp .env.example .env
 uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
 Open http://localhost:8000
+
+Without Compose, `TEX_COMPILE_URL` is empty → **`.tex` only** (no PDF). To get PDFs locally, either use Compose or point `TEX_COMPILE_URL` at a running compile sidecar.
 
 ---
 
@@ -57,8 +84,10 @@ Set **one** provider in `.env` (see `.env.example`):
 | `OPENAI_MODEL` | Default `gpt-4o-mini` |
 | `ANTHROPIC_API_KEY` | Anthropic Messages API |
 | `ANTHROPIC_MODEL` | Default `claude-sonnet-4-20250514` |
+| `MOCK_LLM` | `1` = offline bank-fill (no API key) |
+| `TEX_COMPILE_URL` | Set by Compose to `http://tex:8080/compile` |
 
-If both keys are set, **OpenAI-compatible wins**.
+If both LLM keys are set, **OpenAI-compatible wins**.
 
 ### Offline demo (no API key)
 
@@ -68,28 +97,20 @@ MOCK_LLM=1
 docker compose up --build
 ```
 
-Fills the `.tex` template from the bank using conservative (`public_safe` / `pre_launch`) bullets — no model call. Useful to verify Compose + the data mount before wiring a key.
-
 ---
 
 ## Where to put your real files
-
-Seeded from your sb2nov resume. Edit these as needed:
 
 | Path | What it is |
 |------|------------|
 | `data/experience_bank.yaml` | **Your** roles, bullets, skills, and CHECK/TODO/pre-launch flags |
 | `data/background.md` | Voice, career story, letter constraints |
 | `data/resume_template.tex` | sb2nov LaTeX skeleton (preamble + macros preserved) |
-| `data/output/` | Generated `resume-*.tex` and `cover-letter-*.md` |
-
-`./data` is bind-mounted into the container, so edits on the host show up immediately and outputs persist after the container stops.
+| `data/output/` | Generated `resume-*.tex`, `resume-*.pdf`, `cover-letter-*.md` |
 
 ---
 
 ## Bullet flags (read before sending)
-
-The bank encodes comments from the original `.tex` as metadata. Prompts prefer conservative wording; **you still own the final send**.
 
 | Flag | Meaning |
 |------|---------|
@@ -99,11 +120,7 @@ The bank encodes comments from the original `.tex` as metadata. Prompts prefer c
 | `pre_launch` | Safer pre-GA wording; prefer when launch claims are uncertain |
 | `send_after_ga` | Do not use until the named products are GA / public |
 
-Notable open items from the source resume:
-
-- IBM release / AI agent bullets — confirm public names; prefer pre-launch alternates until CCM 6.4.3 and the AI agent are GA
-- OIDC / roadmap TODOs — don’t claim delivery outcomes not in the bank
-- Tesla pipeline — confirm six- vs seven-stage before sending
+Notable open items: IBM release / AI agent public names; OIDC TODO outcomes; Tesla six- vs seven-stage.
 
 ---
 
@@ -113,20 +130,22 @@ Notable open items from the source resume:
 app/                 FastAPI app, HTML/CSS
   main.py            Routes + UI
   tailor.py          Prompts + file I/O
+  pdf.py             Calls the tex sidecar
   llm.py             OpenAI-compatible / Anthropic client
   config.py          Settings from env
+tex_service/
+  compile_server.py  Tiny HTTP wrapper around latexmk
 data/
   experience_bank.yaml
   background.md
   resume_template.tex
-  output/            Generated files (gitignored contents)
-Dockerfile
-docker-compose.yml
+  output/
+Dockerfile           Python app image
+Dockerfile.tex       TeX Live sidecar image
+docker-compose.yml   app + tex, shared ./data mount
 .env.example
 requirements.txt
 ```
-
-Custom LaTeX commands kept in the template: `\resumeItem`, `\resumeSubheading`, `\resumeProjectHeading`, `\resumeSubHeadingListStart` / `End`, `\resumeItemListStart` / `End`, etc.
 
 ---
 
@@ -134,10 +153,10 @@ Custom LaTeX commands kept in the template: `\resumeItem`, `\resumeSubheading`, 
 
 | Concept | In this project |
 |---------|-----------------|
-| **Image** | Built from the `Dockerfile` — Python + app code + deps. Immutable recipe. |
-| **Container** | A running instance of that image (`docker compose up`). |
-| **Volume / bind mount** | `./data:/app/data` maps your host `data/` folder into the container so bank/template/outputs stay on disk. |
-| **Compose** | `docker-compose.yml` wires the `app` service, port `8000`, `env_file: .env`, and the data mount in one command. |
+| **Image** | Two recipes: `Dockerfile` (Python app) and `Dockerfile.tex` (TeX sidecar). |
+| **Container** | Running instances of those images (`docker compose up`). |
+| **Volume / bind mount** | `./data` mounted into **both** services so `.tex` written by `app` is visible to `tex`, and the PDF lands back on the host. |
+| **Compose** | Wires `app` + `tex`, env, depends_on, and internal DNS (`http://tex:8080`) in one command. |
 
 ---
 
@@ -145,6 +164,7 @@ Custom LaTeX commands kept in the template: `\resumeItem`, `\resumeSubheading`, 
 
 ```bash
 curl http://localhost:8000/health
+docker compose exec tex python3 -c "import urllib.request; print(urllib.request.urlopen('http://127.0.0.1:8080/health').read().decode())"
 ```
 
 ---
