@@ -12,6 +12,16 @@ from app.llm import LLMError
 from app.pdf import PDFError, compile_resume_pdf
 from app.tailor import generate_cover_letter, generate_resume, load_sources, save_outputs
 
+
+def _safe_output_file(filename: str) -> Path:
+    safe = Path(filename).name
+    if safe != filename or ".." in filename:
+        raise HTTPException(status_code=400, detail="Invalid filename")
+    path = settings.output_dir / safe
+    if not path.is_file():
+        raise HTTPException(status_code=404, detail="File not found")
+    return path
+
 APP_DIR = Path(__file__).resolve().parent
 
 app = FastAPI(title="Resume Tailorer", version="1.0.0")
@@ -107,16 +117,47 @@ async def api_generate(
     )
 
 
+@app.post("/api/recompile")
+async def api_recompile(
+    filename: str = Form(...),
+    content: str = Form(...),
+) -> JSONResponse:
+    """Save edited .tex under data/output/ and recompile PDF."""
+    safe = Path(filename).name
+    if safe != filename or ".." in filename or not safe.endswith(".tex"):
+        raise HTTPException(status_code=400, detail="Invalid .tex filename")
+    if not settings.tex_compile_url:
+        raise HTTPException(
+            status_code=503,
+            detail="PDF compile not configured (TEX_COMPILE_URL). Use Docker Compose.",
+        )
+
+    settings.output_dir.mkdir(parents=True, exist_ok=True)
+    tex_path = settings.output_dir / safe
+    text = content if content.endswith("\n") else content + "\n"
+    tex_path.write_text(text, encoding="utf-8")
+
+    rel = f"data/output/{safe}"
+    try:
+        pdf_rel = await compile_resume_pdf(settings, rel)
+    except PDFError as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
+
+    return JSONResponse(
+        {
+            "ok": True,
+            "paths": {"resume": rel, "resume_pdf": pdf_rel},
+            "resume": text,
+        }
+    )
+
+
 @app.get("/download/{kind}/{filename}")
 async def download(kind: str, filename: str) -> FileResponse:
     if kind not in {"resume", "cover", "pdf"}:
         raise HTTPException(status_code=404, detail="Unknown kind")
-    safe = Path(filename).name
-    if safe != filename or ".." in filename:
-        raise HTTPException(status_code=400, detail="Invalid filename")
-    path = settings.output_dir / safe
-    if not path.is_file():
-        raise HTTPException(status_code=404, detail="File not found")
+    path = _safe_output_file(filename)
+    safe = path.name
     if safe.endswith(".tex"):
         media = "application/x-tex"
     elif safe.endswith(".md"):
@@ -126,3 +167,17 @@ async def download(kind: str, filename: str) -> FileResponse:
     else:
         media = "application/octet-stream"
     return FileResponse(path, media_type=media, filename=safe)
+
+
+@app.get("/view/pdf/{filename}")
+async def view_pdf(filename: str) -> FileResponse:
+    """Inline PDF for the embedded preview (not a forced download)."""
+    path = _safe_output_file(filename)
+    if not path.name.endswith(".pdf"):
+        raise HTTPException(status_code=400, detail="Not a PDF")
+    return FileResponse(
+        path,
+        media_type="application/pdf",
+        filename=path.name,
+        content_disposition_type="inline",
+    )

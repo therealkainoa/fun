@@ -26,7 +26,7 @@ docker compose up --build
 # http://localhost:8000
 ```
 
-Paste a JD, generate, then download **PDF** and/or **.tex**. Files land under `data/output/` (`resume-*.tex`, `resume-*.pdf`, `cover-letter-*.md`).
+Paste a JD and generate. The results panel **defaults to an embedded PDF preview**; toggle to **LaTeX source** (editable) and use **Save & recompile PDF** after tweaks. Download PDF / `.tex` stay available. Files land under `data/output/` (`resume-*.tex`, `resume-*.pdf`, `cover-letter-*.md`).
 
 **Pull / rebuild after updates:**
 

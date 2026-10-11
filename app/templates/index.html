@@ -66,9 +66,30 @@
               <a class="dl" id="resume-dl" href="#" download>Download .tex</a>
             </div>
           </div>
+
+          <div class="view-toggle" id="resume-toggle" hidden role="tablist" aria-label="Resume view">
+            <button type="button" class="toggle-btn is-active" id="tab-pdf" role="tab" aria-selected="true">PDF preview</button>
+            <button type="button" class="toggle-btn" id="tab-tex" role="tab" aria-selected="false">LaTeX source</button>
+          </div>
+
           <p class="pdf-note" id="pdf-note" hidden></p>
-          <pre id="resume-out"></pre>
+
+          <div id="resume-pdf-view" class="resume-view" hidden>
+            <iframe id="pdf-frame" title="Resume PDF preview" class="pdf-frame"></iframe>
+          </div>
+
+          <div id="resume-tex-view" class="resume-view" hidden>
+            <label class="field tex-edit-field">
+              <span class="label">Editable LaTeX</span>
+              <textarea id="resume-out" class="tex-editor" rows="22" spellcheck="false"></textarea>
+            </label>
+            <div class="tex-actions">
+              <button type="button" id="recompile-btn" class="secondary-btn" hidden>Save &amp; recompile PDF</button>
+              <p class="meta" id="recompile-status" role="status"></p>
+            </div>
+          </div>
         </article>
+
         <article class="panel" id="cover-panel" hidden>
           <div class="panel-head">
             <h3>Cover letter</h3>
@@ -85,6 +106,76 @@
     const statusEl = document.getElementById("status");
     const submitBtn = document.getElementById("submit-btn");
     const results = document.getElementById("results");
+    const tabPdf = document.getElementById("tab-pdf");
+    const tabTex = document.getElementById("tab-tex");
+    const pdfView = document.getElementById("resume-pdf-view");
+    const texView = document.getElementById("resume-tex-view");
+    const resumeToggle = document.getElementById("resume-toggle");
+    const pdfFrame = document.getElementById("pdf-frame");
+    const resumeOut = document.getElementById("resume-out");
+    const recompileBtn = document.getElementById("recompile-btn");
+    const recompileStatus = document.getElementById("recompile-status");
+
+    let currentTexName = null;
+    let currentPdfName = null;
+
+    function showResumeMode(mode) {
+      const wantPdf = mode === "pdf";
+      tabPdf.classList.toggle("is-active", wantPdf);
+      tabTex.classList.toggle("is-active", !wantPdf);
+      tabPdf.setAttribute("aria-selected", wantPdf ? "true" : "false");
+      tabTex.setAttribute("aria-selected", wantPdf ? "false" : "true");
+      pdfView.hidden = !wantPdf;
+      texView.hidden = wantPdf;
+    }
+
+    function setPdfPreview(pdfName) {
+      currentPdfName = pdfName;
+      const pdfA = document.getElementById("resume-pdf-dl");
+      if (pdfName) {
+        pdfA.hidden = false;
+        pdfA.href = `/download/pdf/${pdfName}`;
+        pdfA.download = pdfName;
+        // Cache-bust so recompile refreshes the iframe.
+        pdfFrame.src = `/view/pdf/${pdfName}?t=${Date.now()}`;
+        pdfView.hidden = false;
+      } else {
+        pdfA.hidden = true;
+        pdfFrame.removeAttribute("src");
+      }
+    }
+
+    tabPdf.addEventListener("click", () => showResumeMode("pdf"));
+    tabTex.addEventListener("click", () => showResumeMode("tex"));
+
+    recompileBtn.addEventListener("click", async () => {
+      if (!currentTexName) return;
+      recompileBtn.disabled = true;
+      recompileStatus.textContent = "Compiling…";
+      recompileStatus.className = "meta busy";
+      const body = new FormData();
+      body.append("filename", currentTexName);
+      body.append("content", resumeOut.value);
+      try {
+        const res = await fetch("/api/recompile", { method: "POST", body });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          throw new Error(data.detail || res.statusText || "Recompile failed");
+        }
+        const pdfName = (data.paths.resume_pdf || "").split("/").pop();
+        setPdfPreview(pdfName);
+        showResumeMode("pdf");
+        recompileStatus.textContent = "PDF updated.";
+        recompileStatus.className = "meta ok-meta";
+        statusEl.textContent = "Recompiled. PDF refreshed under data/output/.";
+        statusEl.className = "status ok";
+      } catch (err) {
+        recompileStatus.textContent = err.message || String(err);
+        recompileStatus.className = "meta err-meta";
+      } finally {
+        recompileBtn.disabled = false;
+      }
+    });
 
     form.addEventListener("submit", async (e) => {
       e.preventDefault();
@@ -92,6 +183,7 @@
       statusEl.className = "status busy";
       submitBtn.disabled = true;
       results.hidden = true;
+      recompileStatus.textContent = "";
 
       const body = new FormData();
       body.append("job_description", document.getElementById("job_description").value);
@@ -111,32 +203,38 @@
 
         if (data.resume) {
           resumePanel.hidden = false;
-          document.getElementById("resume-out").textContent = data.resume;
-          const name = (data.paths.resume || "").split("/").pop();
+          resumeOut.value = data.resume;
+          currentTexName = (data.paths.resume || "").split("/").pop();
           const a = document.getElementById("resume-dl");
-          a.href = `/download/resume/${name}`;
-          a.download = name;
+          a.href = `/download/resume/${currentTexName}`;
+          a.download = currentTexName;
 
-          const pdfA = document.getElementById("resume-pdf-dl");
           const pdfNote = document.getElementById("pdf-note");
+          resumeToggle.hidden = false;
+
+          recompileBtn.hidden = false;
           if (data.paths.resume_pdf) {
             const pdfName = data.paths.resume_pdf.split("/").pop();
-            pdfA.hidden = false;
-            pdfA.href = `/download/pdf/${pdfName}`;
-            pdfA.download = pdfName;
+            setPdfPreview(pdfName);
             pdfNote.hidden = true;
             pdfNote.textContent = "";
+            showResumeMode("pdf");
           } else {
-            pdfA.hidden = true;
+            setPdfPreview(null);
+            pdfView.hidden = true;
             if (data.pdf_error) {
               pdfNote.hidden = false;
-              pdfNote.textContent = "PDF compile failed: " + data.pdf_error;
+              pdfNote.textContent = "PDF compile failed: " + data.pdf_error + " You can edit the LaTeX and try Save & recompile.";
             } else {
-              pdfNote.hidden = true;
+              pdfNote.hidden = false;
+              pdfNote.textContent = "No PDF yet — showing LaTeX source. Use Save & recompile if the TeX service is up.";
             }
+            showResumeMode("tex");
           }
         } else {
           resumePanel.hidden = true;
+          currentTexName = null;
+          currentPdfName = null;
         }
 
         if (data.cover_letter) {
@@ -150,7 +248,7 @@
           coverPanel.hidden = true;
         }
 
-        const pdfBit = data.paths && data.paths.resume_pdf ? " PDF ready." : "";
+        const pdfBit = data.paths && data.paths.resume_pdf ? " PDF preview ready." : "";
         statusEl.textContent = "Done. Files also saved under data/output/." + pdfBit;
         statusEl.className = "status ok";
         results.scrollIntoView({ behavior: "smooth", block: "start" });

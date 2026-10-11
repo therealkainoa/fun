@@ -302,6 +302,124 @@ button[type="submit"]:disabled {
   color: var(--err);
 }
 
+.view-toggle {
+  display: flex;
+  gap: 0.35rem;
+  margin: 0.35rem 0 0.85rem;
+  padding: 0.2rem;
+  background: rgba(255, 255, 255, 0.35);
+  border: 1px solid var(--line);
+  width: fit-content;
+  max-width: 100%;
+}
+
+.toggle-btn {
+  appearance: none;
+  border: none;
+  background: transparent;
+  font: inherit;
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: var(--ink-soft);
+  padding: 0.45rem 0.85rem;
+  cursor: pointer;
+  border-radius: 2px;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.toggle-btn:hover {
+  color: var(--ink);
+}
+
+.toggle-btn.is-active {
+  background: var(--accent);
+  color: #f7f3eb;
+}
+
+.resume-view {
+  min-height: 200px;
+}
+
+.pdf-frame {
+  width: 100%;
+  height: min(72vh, 880px);
+  min-height: 420px;
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.65);
+}
+
+.tex-edit-field {
+  margin: 0;
+}
+
+.tex-editor {
+  width: 100%;
+  resize: vertical;
+  min-height: 320px;
+  padding: 1rem 1.1rem;
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.55);
+  color: var(--ink);
+  font-family: ui-monospace, "Cascadia Code", "SF Mono", Menlo, monospace;
+  font-size: 0.82rem;
+  line-height: 1.45;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+}
+
+.tex-editor:focus {
+  outline: none;
+  border-color: var(--accent);
+  background: rgba(255, 255, 255, 0.85);
+  box-shadow: 0 0 0 3px rgba(15, 107, 92, 0.15);
+}
+
+.tex-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem 1rem;
+  margin-top: 0.75rem;
+}
+
+.secondary-btn {
+  appearance: none;
+  border: 1px solid var(--accent);
+  background: transparent;
+  color: var(--accent-deep);
+  font: inherit;
+  font-weight: 600;
+  font-size: 0.95rem;
+  padding: 0.6rem 1.1rem;
+  border-radius: 2px;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.secondary-btn:hover:not(:disabled) {
+  background: rgba(15, 107, 92, 0.08);
+}
+
+.secondary-btn:disabled {
+  opacity: 0.55;
+  cursor: wait;
+}
+
+.meta.busy,
+.meta.ok-meta,
+.meta.err-meta {
+  margin: 0;
+}
+
+.meta.ok-meta {
+  color: var(--ok);
+}
+
+.meta.err-meta {
+  color: var(--err);
+}
+
 pre {
   margin: 0;
   padding: 1rem 1.1rem;
