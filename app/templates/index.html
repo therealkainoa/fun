@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Tailor — resume & cover letter</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700&family=Source+Sans+3:wght@400;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/static/styles.css" />
+</head>
+<body>
+  <div class="atmosphere" aria-hidden="true"></div>
+
+  <main class="shell">
+    <header class="brand-block">
+      <p class="brand">Tailor</p>
+      <h1>Match the job without inventing your past.</h1>
+      <p class="lede">
+        Paste a job description. We’ll select and rephrase from your experience bank —
+        never fabricate employers, titles, or metrics.
+      </p>
+    </header>
+
+    <form id="tailor-form" class="compose" novalidate>
+      <label class="field">
+        <span class="label">Job description</span>
+        <textarea
+          id="job_description"
+          name="job_description"
+          rows="12"
+          required
+          placeholder="Paste the full JD here…"
+        ></textarea>
+      </label>
+
+      <fieldset class="outputs">
+        <legend>Generate</legend>
+        <label class="check">
+          <input type="checkbox" name="want_resume" id="want_resume" checked />
+          <span>Resume (LaTeX)</span>
+        </label>
+        <label class="check">
+          <input type="checkbox" name="want_cover" id="want_cover" checked />
+          <span>Cover letter (Markdown)</span>
+        </label>
+      </fieldset>
+
+      <div class="actions">
+        <button type="submit" id="submit-btn">Generate</button>
+        <p class="meta" id="provider-meta">
+          Provider: <strong>{{ provider }}</strong> · model <strong>{{ model }}</strong>
+        </p>
+      </div>
+      <p class="status" id="status" role="status" aria-live="polite"></p>
+    </form>
+
+    <section class="results" id="results" hidden>
+      <h2>Results</h2>
+      <div class="result-panels">
+        <article class="panel" id="resume-panel" hidden>
+          <div class="panel-head">
+            <h3>Resume (.tex)</h3>
+            <a class="dl" id="resume-dl" href="#" download>Download</a>
+          </div>
+          <pre id="resume-out"></pre>
+        </article>
+        <article class="panel" id="cover-panel" hidden>
+          <div class="panel-head">
+            <h3>Cover letter</h3>
+            <a class="dl" id="cover-dl" href="#" download>Download</a>
+          </div>
+          <pre id="cover-out"></pre>
+        </article>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const form = document.getElementById("tailor-form");
+    const statusEl = document.getElementById("status");
+    const submitBtn = document.getElementById("submit-btn");
+    const results = document.getElementById("results");
+
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      statusEl.textContent = "Generating… this can take a moment.";
+      statusEl.className = "status busy";
+      submitBtn.disabled = true;
+      results.hidden = true;
+
+      const body = new FormData();
+      body.append("job_description", document.getElementById("job_description").value);
+      body.append("want_resume", document.getElementById("want_resume").checked ? "true" : "false");
+      body.append("want_cover", document.getElementById("want_cover").checked ? "true" : "false");
+
+      try {
+        const res = await fetch("/api/generate", { method: "POST", body });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          throw new Error(data.detail || res.statusText || "Request failed");
+        }
+
+        results.hidden = false;
+        const resumePanel = document.getElementById("resume-panel");
+        const coverPanel = document.getElementById("cover-panel");
+
+        if (data.resume) {
+          resumePanel.hidden = false;
+          document.getElementById("resume-out").textContent = data.resume;
+          const name = (data.paths.resume || "").split("/").pop();
+          const a = document.getElementById("resume-dl");
+          a.href = `/download/resume/${name}`;
+          a.download = name;
+        } else {
+          resumePanel.hidden = true;
+        }
+
+        if (data.cover_letter) {
+          coverPanel.hidden = false;
+          document.getElementById("cover-out").textContent = data.cover_letter;
+          const name = (data.paths.cover_letter || "").split("/").pop();
+          const a = document.getElementById("cover-dl");
+          a.href = `/download/cover/${name}`;
+          a.download = name;
+        } else {
+          coverPanel.hidden = true;
+        }
+
+        statusEl.textContent = "Done. Files also saved under data/output/.";
+        statusEl.className = "status ok";
+        results.scrollIntoView({ behavior: "smooth", block: "start" });
+      } catch (err) {
+        statusEl.textContent = err.message || String(err);
+        statusEl.className = "status err";
+      } finally {
+        submitBtn.disabled = false;
+      }
+    });
+  </script>
+</body>
+</html>
