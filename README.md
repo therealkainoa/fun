@@ -60,6 +60,16 @@ Set **one** provider in `.env` (see `.env.example`):
 
 If both keys are set, **OpenAI-compatible wins**.
 
+### Offline demo (no API key)
+
+```bash
+# in .env
+MOCK_LLM=1
+docker compose up --build
+```
+
+Fills the `.tex` template from the bank using conservative (`public_safe` / `pre_launch`) bullets — no model call. Useful to verify Compose + the data mount before wiring a key.
+
 ---
 
 ## Where to put your real files

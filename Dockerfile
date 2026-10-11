@@ -6,7 +6,8 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 WORKDIR /app
 
-RUN useradd --create-home --uid 10001 appuser
+# UID 1000 matches typical host bind-mount ownership for ./data writes.
+RUN useradd --create-home --uid 1000 appuser
 
 COPY requirements.txt .
 RUN pip install --upgrade pip && pip install -r requirements.txt
@@ -16,7 +17,7 @@ COPY app ./app
 # so `docker run` without a mount still has placeholders.
 COPY data ./data
 
-RUN chown -R appuser:appuser /app
+RUN mkdir -p /app/data/output && chown -R appuser:appuser /app
 USER appuser
 
 EXPOSE 8000

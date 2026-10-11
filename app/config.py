@@ -15,6 +15,9 @@ class Settings(BaseSettings):
     anthropic_api_key: str | None = None
     anthropic_model: str = "claude-sonnet-4-20250514"
 
+    # When true, skip the LLM and fill from the bank deterministically (offline demo).
+    mock_llm: bool = False
+
     @property
     def experience_bank_path(self) -> Path:
         return self.data_dir / "experience_bank.yaml"
@@ -32,6 +35,8 @@ class Settings(BaseSettings):
         return self.data_dir / "output"
 
     def provider(self) -> str | None:
+        if self.mock_llm:
+            return "mock"
         if self.openai_api_key:
             return "openai"
         if self.anthropic_api_key:

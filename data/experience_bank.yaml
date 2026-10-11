@@ -48,18 +48,18 @@ roles:
           B2Bi Suite 2.1.1, Control Center Monitor 6.4.3, and a net-new AI agent
           product; coordinated an emergency security fix across 3 release branches
           with engineering and the chief architect.
-        flags: [check]
+        flags: [check, send_after_ga]
         notes: >-
           CHECK: confirm official public product names before sending.
-          Prefer pre_launch alternate until CCM 6.4.3 and the AI agent are GA.
+          SEND ONLY AFTER CCM 6.4.3 AND THE AI AGENT ARE GA (this 4-release claim).
+          Prefer pre_launch alternate until then.
         alternates:
           - id: ibm-releases-pre-launch
             text: >-
               Shipped 2 enterprise releases in 6 months (SSP 6.2.2, B2Bi Suite 2.1.1),
               with Control Center Monitor 6.4.3 and a net-new AI agent product launching
               Q4 2026; coordinated an emergency security fix across 3 release branches.
-            flags: [pre_launch, send_after_ga]
-            notes: SEND ONLY AFTER CCM 6.4.3 AND THE AI AGENT ARE GA (for the full 4-release claim).
+            flags: [pre_launch]
 
       - id: ibm-roadmap-synthesis
         text: >-

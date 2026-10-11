@@ -9,6 +9,7 @@ import yaml
 
 from app.config import Settings
 from app.llm import complete
+from app.mock_fill import build_mock_cover_letter, build_mock_resume
 
 HONESTY = """
 HONESTY RULE (non-negotiable):
@@ -37,6 +38,9 @@ def load_sources(settings: Settings) -> dict[str, str]:
 
 
 async def generate_resume(settings: Settings, job_description: str, sources: dict[str, str]) -> str:
+    if settings.mock_llm:
+        return build_mock_resume(settings)
+
     system = f"""You are a careful resume editor for a real person.
 {HONESTY}
 
@@ -66,6 +70,9 @@ HARD RULES FOR LATEX:
 async def generate_cover_letter(
     settings: Settings, job_description: str, sources: dict[str, str]
 ) -> str:
+    if settings.mock_llm:
+        return build_mock_cover_letter(settings, job_description)
+
     system = f"""You are a careful cover-letter writer for a real person.
 {HONESTY}
 

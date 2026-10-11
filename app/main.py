@@ -31,6 +31,8 @@ async def index(request: Request) -> HTMLResponse:
                 if provider == "openai"
                 else settings.anthropic_model
                 if provider == "anthropic"
+                else "bank-fill"
+                if provider == "mock"
                 else "—"
             ),
         },

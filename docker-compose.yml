@@ -5,6 +5,8 @@ services:
       - "8000:8000"
     env_file:
       - .env
+    # UID 1000 matches the image appuser and typical host ownership of ./data.
+    user: "1000:1000"
     volumes:
       # Bank, background, template, and generated outputs live on the host.
       - ./data:/app/data
