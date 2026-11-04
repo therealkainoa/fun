@@ -1,0 +1,189 @@
+# Source of truth for Christopher Aqui's resume facts.
+# Derived from the sb2nov LaTeX resume (internal/resume-template.tex).
+# Tailor may select, reorder, and lightly rephrase — never invent employers,
+# titles, dates, or metrics beyond what appears here.
+#
+# Bullet flags:
+#   public_safe     — preferred default wording for applications
+#   check           — needs human confirmation before sending
+#   todo            — incomplete; prefer omitting outcome claims
+#   pre_launch      — safer pre-GA wording; prefer over launch claims when unsure
+#   send_after_ga   — do not use until products are GA / publicly named
+
+profile:
+  name: Christopher Aqui
+  email: kaqui.official@gmail.com
+  links:
+    - label: LinkedIn
+      url: https://linkedin.com/in/christopher-aqui
+    - label: Website
+      url: https://www.kainoaaqui.com
+
+education:
+  - school: Seattle Pacific University
+    location: Seattle, WA
+    degree: Bachelor of Science in Computer Science
+    end: Dec 2025
+
+roles:
+  - id: ibm-pm
+    company: IBM
+    location: Austin, TX
+    title: Product Manager, B2B Integration Platform
+    start: Mar 2026
+    end: Present
+    bullets:
+      - id: ibm-ssp-seas-portfolio
+        text: >-
+          Own strategy and roadmap for Sterling Secure Proxy (SSP) and Sterling
+          External Authentication Server (SEAS), enterprise B2B file-transfer and
+          authentication products in IBM's $500M+ Sterling Data Exchange portfolio;
+          scope expanded to Control Center within six months; brief senior leadership
+          quarterly on revenue and renewal performance.
+        flags: [public_safe]
+
+      - id: ibm-releases
+        text: >-
+          Launched 4 enterprise releases in under a year, including SSP 6.2.2,
+          B2Bi Suite 2.1.1, Control Center Monitor 6.4.3, and a net-new AI agent
+          product; coordinated an emergency security fix across 3 release branches
+          with engineering and the chief architect.
+        flags: [check, send_after_ga]
+        notes: >-
+          CHECK: confirm official public product names before sending.
+          SEND ONLY AFTER CCM 6.4.3 AND THE AI AGENT ARE GA (this 4-release claim).
+          Prefer pre_launch alternate until then.
+        alternates:
+          - id: ibm-releases-pre-launch
+            text: >-
+              Shipped 2 enterprise releases in 6 months (SSP 6.2.2, B2Bi Suite 2.1.1),
+              with Control Center Monitor 6.4.3 and a net-new AI agent product launching
+              Q4 2026; coordinated an emergency security fix across 3 release branches.
+            flags: [pre_launch]
+
+      - id: ibm-roadmap-synthesis
+        text: >-
+          Synthesized 50+ feature requests from 10+ enterprise B2B accounts into a
+          prioritized roadmap, cutting a 16-item backlog to the 7 highest-impact
+          features committed for the next release, each sized and scheduled with engineering.
+        flags: [todo]
+        notes: TODO — add delivery status of the committed features once known. Safe to use as written for prioritization work.
+
+      - id: ibm-oidc
+        text: >-
+          Diagnosed a critical authentication gap forcing 3 enterprise customers to
+          build their own workarounds; made the case to elevate native OIDC support to
+          roadmap priority and mobilized architecture and engineering on a technical
+          response within 48 hours.
+        flags: [todo]
+        notes: TODO — add outcome (e.g., OIDC support committed to a release). Do not invent an outcome.
+
+      - id: ibm-ai-agent
+        text: >-
+          Took a net-new AI agent product from business case to launch for enterprise
+          customers, defining packaging, cross-product compatibility, and risk strategy
+          and aligning Legal, Finance, Marketing, and Engineering on go-to-market.
+        flags: [check]
+        notes: CHECK — swap in the agent's public product name once announced.
+        alternates:
+          - id: ibm-ai-agent-pre-launch
+            text: >-
+              Built the business case for a net-new AI agent product, defining packaging,
+              cross-product compatibility, and risk strategy and aligning Legal, Finance,
+              Marketing, and Engineering.
+            flags: [pre_launch]
+
+      - id: ibm-customer-voice
+        text: >-
+          Serve as product voice to 200+ enterprise clients and IBM sellers; lead
+          Customer Advisory Council outreach to 50+ customers on agentic AI adoption,
+          turning customer feedback into 2027 product strategy.
+        flags: [public_safe]
+
+  - id: aws-jumpstart
+    company: Amazon Web Services
+    location: Seattle, WA
+    title: Intern, SageMaker JumpStart, Summer 2025
+    start: Summer 2025
+    end: ""
+    bullets:
+      - id: aws-eval-framework
+        text: >-
+          Took a developer-facing ML evaluation framework for SageMaker JumpStart from
+          design to launch, partnering with scientists, engineers, PMs, and technical
+          writers; now published in the AWS Developer Guide.
+        flags: [public_safe]
+      - id: aws-modular-eval
+        text: >-
+          Designed a modular evaluation system for supervised and unsupervised models,
+          giving developers one consistent way to compare accuracy and latency across
+          models before choosing one to deploy.
+        flags: [public_safe]
+      - id: aws-onboarding
+        text: >-
+          Cut engineer onboarding time by 54% with a cross-model comparison pipeline
+          enabling side-by-side analysis across datasets.
+        flags: [public_safe]
+
+  - id: tesla-intern
+    company: Tesla
+    location: Palo Alto, CA
+    title: Intern, Fall 2025
+    start: Fall 2025
+    end: ""
+    bullets:
+      - id: tesla-pipeline
+        text: >-
+          Identified a manual review bottleneck slowing documentation for vehicle
+          software teams and, beyond assigned scope, scoped and built a six-stage data
+          pipeline still in production, reducing manual review time.
+        flags: [check]
+        notes: CHECK — six-stage or seven-stage? Prefer "six-stage" until confirmed; do not invent a time-saved metric.
+      - id: tesla-docs-align
+        text: >-
+          Drove alignment between vehicle software engineers and documentation teams
+          to standardize system architecture documentation across teams.
+        flags: [public_safe]
+      - id: tesla-ota-reviews
+        text: >-
+          Ran technical reviews with engineering stakeholders to validate accuracy of
+          over-the-air update and debugging workflows for internal users.
+        flags: [public_safe]
+
+  - id: nsf-research
+    company: National Science Foundation (NSF)
+    location: Tuscaloosa, AL
+    title: Research Intern
+    start: Summer 2024
+    end: ""
+    extra:
+      poster_label: ML Research Poster
+      poster_url: https://drive.google.com/file/d/1KzCu_tcpMEPy-Qkd4xRzu6nL1w5MJLY5/view?usp=sharing
+      latex_company_line: >-
+        Research Intern (\href{https://drive.google.com/file/d/1KzCu_tcpMEPy-Qkd4xRzu6nL1w5MJLY5/view?usp=sharing}{\textcolor{blue}{ML Research Poster}})
+      latex_title_line: National Science Foundation (NSF), Tuscaloosa, AL
+      latex_date_line: Summer 2024
+    bullets:
+      - id: nsf-federated
+        text: >-
+          Stress-tested the reliability of federated learning models (Temporal
+          Convolutional Networks) on 300+ energy consumption samples under label-flip,
+          noise, scaling, and distribution-shift scenarios.
+        flags: [public_safe]
+      - id: nsf-encryption
+        text: >-
+          Implemented functional encryption to secure model updates, enabling
+          privacy-preserving analysis across distributed environments.
+        flags: [public_safe]
+
+skills_hints:
+  # Not a dedicated Skills section in the source resume; optional keywords only.
+  # Do not invent tools or languages beyond what roles imply and you are willing to claim.
+  themes:
+    - B2B / enterprise integration product management
+    - Roadmapping and backlog prioritization
+    - Cross-functional launch (eng, legal, finance, marketing)
+    - Customer advisory / enterprise stakeholder management
+    - ML evaluation frameworks (SageMaker JumpStart)
+    - Federated learning / privacy-preserving ML (research)
+    - Data pipelines for documentation workflows

@@ -1,0 +1,35 @@
+# TeX Live sidecar for compiling sb2nov-style resumes.
+# Kept separate from the app image so Python stays slim and Compose teaches
+# multi-service + shared volumes.
+FROM debian:bookworm-slim
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Focused package set (not texlive-full). Avoids texlive-fonts-extra (~GB)
+# unless required — marvosym is pulled via latex-extra / fonts-recommended on bookworm.
+# Tradeoff: hundreds of MB vs multi‑GB full schemes.
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        ca-certificates \
+        python3 \
+        latexmk \
+        texlive-latex-base \
+        texlive-latex-recommended \
+        texlive-fonts-recommended \
+        texlive-latex-extra \
+        texlive-plain-generic \
+    && rm -rf /var/lib/apt/lists/* \
+    && apt-get clean
+
+RUN useradd --create-home --uid 1000 texuser
+
+WORKDIR /service
+COPY tex_service/compile_server.py /service/compile_server.py
+
+RUN mkdir -p /data/output && chown -R texuser:texuser /data /service
+USER texuser
+
+ENV DATA_DIR=/data \
+    PORT=8080
+
+EXPOSE 8080
+CMD ["python3", "/service/compile_server.py"]

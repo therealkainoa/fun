@@ -1,0 +1,1 @@
+"""Resume / cover-letter tailorer."""
